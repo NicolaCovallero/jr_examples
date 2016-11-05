@@ -31,6 +31,9 @@ try:
         data = client_sock.recv(1024)
         if len(data) == 0: break
         print("received [%s]" % data)
+        # send back the data
+        client_sock.send(data)
+
 except IOError:
     pass
 
