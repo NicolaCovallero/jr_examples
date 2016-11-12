@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import sys, getopt
-
+import numpy as np
 try:
     opts, args = getopt.getopt(sys.argv,"hc:o:",["connection"])
 except getopt.GetoptError:
@@ -22,6 +22,12 @@ print ""
 data = "imageA"
 print data[0:5]
 
+
+s = "abcsda"
+n = np.fromstring(s,dtype = np.uint8)
+
+print n
+print n.dtype
 #!/usr/bin/python
 
 import sys, getopt

@@ -65,28 +65,61 @@ while not connection_:
 
 print("Accepted connection from ", client_info)
 
+n_chunks_ = 0
+n_chunks = 0
 while True:
     try:
         # if the connection is lost this will raise up an exception and
         # we can detect the connection has been dropped off
         data = client_sock.recv(1024)
+        print "data elgnth:", len(data)
         if not( len(data) == 0): 
-            if data[0:5] == "imagei_coding":
+            if data[0:12] == "image_coding":
                 data_splitted =  data.split(',')
                 shape = data_splitted[1].split('x')
-                shape = np.array([shape[0],shape[1],shape[2]])
-                n_chunks = data_splitted[2]
+                shape = np.array([shape[0],shape[1],shape[2]],dtype='uint32')
+                #print shape
+                #chunks = np.empty([shape[0]*shape[1]*shape[2]],dtype='uint8')
+                chunks = ''
+                n_pixels = data_splitted[3]
+                n_chunks = int(data_splitted[2])
                 n_chunks_ = 0 # this will be used to count the received number of chunks
-                print "Receiving image with shape ", shape, " and ", n_chunks , " chunks" 
+                print "Receiving image with shape ", shape, " and ", n_chunks , " chunks\n" 
             else:
                 n_chunks_ = n_chunks_ + 1
                 if n_chunks_ > n_chunks:
                     print "You received more than ", n_chunks, "! Something has gone wrong."
                     sys.exit(2)
+
+                print "data length:", len(data)
+                if n_chunks_ is not n_chunks:
+                    #chunks[(n_chunks_ - 1) * n_pixels + 1:n_chunks_ * n_pixels +1 ] = 10# np.array(list(data),dtype='uint8')
+                    chunks = chunks + data
+                else:
+                    #chunks[n_chunks_*n_pixels+1:0] = np.array(list(data))
+                    chunks = chunks + data
         else:
             n_chunks = 0
-        print "number of chunks ",  n_chunks_
-                
+
+        # in such a way we can modify the last printed line and have a nicer view :)
+        
+        #sys.stdout.write("\033[F") # cursor up one line            
+        print n_chunks_, "/" , n_chunks , " chunks received"
+        if n_chunks_ > n_chunks:
+            print "You received more than ", n_chunks, "! Something has gone wrong."
+            sys.exit(2)
+
+        if n_chunks_ == n_chunks:
+            print "Finished receiving the image! "
+            print len(chunks)
+            chunks = np.fromstring(chunks,dtype=np.uint8)
+            print chunks.size
+            chunks = np.reshape(chunks,(shape[0],shape[1],shape[2]))
+            from PIL import Image
+            img = Image.fromarray(chunks)
+            img.show()
+
+
     except IOError:
         print "connection lost with: ", client_info
         print "Waiting for connection on RFCOMM channel "+ str(port)
