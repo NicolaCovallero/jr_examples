@@ -11,6 +11,13 @@ for opt, arg in opts:
     if opt == '-c':
         print "-c" , arg
 
+import time
+for x in range (0,5):  
+    b = "Loading" + "." * x
+    print b
+    sys.stdout.write("\033[F")# cursor up one line
+    time.sleep(1)
+
 
 #!/usr/bin/python
 
