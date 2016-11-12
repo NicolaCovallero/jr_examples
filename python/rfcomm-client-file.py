@@ -57,7 +57,7 @@ print("chunks elapsed time %d", (t_start - time.time()))
 print("n chunks %d", n_chunks)
 
 print("Sending image via bluetooth")
-data="image,"+str(shape[0])+"x"+str(shape[1])+"x"+str(shape[2])+","+str(n_chunks)
+data="image_coding,"+str(shape[0])+"x"+str(shape[1])+"x"+str(shape[2])+","+str(n_chunks)
 sock.send(data)
 
 n = 1

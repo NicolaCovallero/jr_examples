@@ -70,17 +70,22 @@ while True:
         # if the connection is lost this will raise up an exception and
         # we can detect the connection has been dropped off
         data = client_sock.recv(1024)
-        n_chunks_ = 0
         if not( len(data) == 0): 
-            if data[0:5] == "image":
+            if data[0:5] == "imagei_coding":
                 data_splitted =  data.split(',')
                 shape = data_splitted[1].split('x')
                 shape = np.array([shape[0],shape[1],shape[2]])
                 n_chunks = data_splitted[2]
+                n_chunks_ = 0 # this will be used to count the received number of chunks
                 print "Receiving image with shape ", shape, " and ", n_chunks , " chunks" 
             else:
                 n_chunks_ = n_chunks_ + 1
-                #print "number of chunks ",  n_chunks
+                if n_chunks_ > n_chunks:
+                    print "You received more than ", n_chunks, "! Something has gone wrong."
+                    sys.exit(2)
+        else:
+            n_chunks = 0
+        print "number of chunks ",  n_chunks_
                 
     except IOError:
         print "connection lost with: ", client_info
