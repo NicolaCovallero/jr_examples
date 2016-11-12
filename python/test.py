@@ -18,6 +18,9 @@ for x in range (0,5):
     sys.stdout.write("\033[F")# cursor up one line
     time.sleep(1)
 
+print ""
+data = "imageA"
+print data[0:5]
 
 #!/usr/bin/python
 

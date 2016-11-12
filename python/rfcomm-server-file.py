@@ -6,8 +6,8 @@
 
 from bluetooth import *
 import time
-import image_chunks as ic*
-
+import image_chunks as ic
+import numpy as np
 
 # create a bluetooth RFCOMM socket
 server_sock=BluetoothSocket( RFCOMM )
@@ -70,12 +70,17 @@ while True:
         # if the connection is lost this will raise up an exception and
         # we can detect the connection has been dropped off
         data = client_sock.recv(1024)
+        n_chunks_ = 0
         if not( len(data) == 0): 
-            data_splitted = str.split(data,',')
-            if data_splitted[1] == "image":
-                shape = str.split(data_splitted[2],'x')
-                shape = np.array([shape[1],shape[2],shape[3]])
-                print "Image received with shape", shape
+            if data[0:5] == "image":
+                data_splitted =  data.split(',')
+                shape = data_splitted[1].split('x')
+                shape = np.array([shape[0],shape[1],shape[2]])
+                n_chunks = data_splitted[2]
+                print "Receiving image with shape ", shape, " and ", n_chunks , " chunks" 
+            else:
+                n_chunks_ = n_chunks_ + 1
+                #print "number of chunks ",  n_chunks
                 
     except IOError:
         print "connection lost with: ", client_info
