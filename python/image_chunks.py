@@ -10,7 +10,7 @@ def getChunks(image):
     """
     shape = image.shape
     img = image.flatten()
-    n_pixels = math.ceil(1024/shape[2])*3;
+    n_pixels = math.floor(1024/shape[2])*3;
     n_chunks = int(math.ceil(len(img) / n_pixels))
     chunks = []
     for n in range(0, n_chunks):
