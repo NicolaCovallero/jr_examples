@@ -24,18 +24,28 @@ advertise_service( server_sock, "jr",
 print("Waiting for connection on RFCOMM channel %d" % port)
 
 client_sock, client_info = server_sock.accept()
+#timeout = 0.1
+#client_sock.settimeout(timeout)
 print("Accepted connection from ", client_info)
 
-try:
-    while True:
+while True:
+    try:
+       
         data = client_sock.recv(1024)
-        if len(data) == 0: break
-        print("received [%s]" % data)
-        # send back the data
-        client_sock.send(data)
+        if not( len(data) == 0): 
+            print("received [%s]" % data)
+            # send back the data
+            client_sock.send(data)
 
-except IOError:
-    client_sock, client_info = server_sock.accept()
+    except IOError:
+        print "connection lost with: ", client_info
+        print "waiting for new connections"
+        client_sock, client_info = server_sock.accept()
+        #client_sock.settimeout(timeout)
+        print("Accepted connection from ", client_info)
+
+
+print("Accepted connection from ", client_info)
 
 print("disconnected")
 
