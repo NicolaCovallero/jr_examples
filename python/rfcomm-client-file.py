@@ -9,6 +9,8 @@ import sys
 import numpy as np
 import image_chunks as ic
 import time
+import init
+import decorators as dec
 
 if sys.version < '3':
     input = raw_input
@@ -19,16 +21,12 @@ if len(sys.argv) < 2:
     print("no device specified.  Searching all nearby bluetooth devices for")
     print("the SampleServer service")
 else:
-    if sys.argv[1]
     addr = sys.argv[1]
     print("Searching for SampleServer on %s" % addr)
 
 # search for the SampleServer service
 
-if uuid_ == 1:
-    uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
-elif uuid_ == 2:
-    uuid = "94f39d29-7d6d-437d-973b-fba39e49d4e5"
+uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
 
 service_matches = find_service( uuid = uuid, address = addr )
 
