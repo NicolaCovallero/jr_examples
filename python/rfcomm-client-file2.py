@@ -52,7 +52,7 @@ from PIL import Image
 img_ = Image.open('test.png')
 img_ = np.array(img_)
 t_start = time.time()
-shape = img_.shape()
+shape = img_.shape
 img = ic.getStringFromNumpyArray(img_)
 print("chunks elapsed time %d", (t_start - time.time()))
 

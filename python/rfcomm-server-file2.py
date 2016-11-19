@@ -89,10 +89,9 @@ while True:
                 if b > MSGLEN:
                     print "You received more than ", MSGLEN, " bytes! Something has gone wrong."
                     sys.exit(2)
-                else b < MSGLEN:
+                elif b < MSGLEN:
                     if data == '':
-                        raise RuntimeError, \ \
-                                "connessione socket interrotta"
+                        raise RuntimeError, "connessione socket interrotta"
                     msg = msg + chunk
 
         else:
