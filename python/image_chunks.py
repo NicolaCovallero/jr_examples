@@ -46,19 +46,48 @@ def buildFromChunks(chunks,n_chunks,shape,n_pixels):
     image_array = np.reshape(image_array,(shape[0],shape[1],shape[2]))
     return np.uint8(image_array)
 
+def getNumpyImageFromString(img,shape):
+    """
+
+    :param img: image in string format
+    :param shape: shape of the image
+    :return: numpy array of the image
+    """
+    return np.reshape(np.fromstring(img,dtype=np.uint8), (shape[0], shape[1], shape[2]))
+
+def getStringFromNumpyArray(img):
+    """
+    Get a string from the numpy array given as argument
+    :param img: numpy array image
+    :return: image reshaped as a string
+    """
+    return img.flatten().tostring()
 
 if __name__ == '__main__':
     from PIL import Image
     import time
 
     img_ = Image.open('test.png')
-    img_ = np.array(img_)
+    img_ = np.array(img_,dtype=np.uint8)
     t_start = time.time()
-    [chunks,n_chunks,shape,n_pixels] = getChunks(img_)
-    print "chunks elapsed time", t_start - time.time()
-    print "n chunks",n_chunks
+    #[chunks,n_chunks,shape,n_pixels] = getChunks(img_)
 
+    shape = img_.shape
+    img = getStringFromNumpyArray(img_)
+    #n_pixels = math.floor(1024/shape[2])*3;
+    #n_chunks = int(math.ceil(len(img) / n_pixels))
+    #chunks = []
+    #for n in range(0, n_chunks):
+    #    if n is not n_chunks:
+    #        chunks.append(img[n * n_pixels + 1: (n + 1) * n_pixels + 1])
+    #    else:
+    #        chunks.append(img[n * n_pixels + 1: 0])
+    #return [chunks,n_chunks,shape,n_pixels]
+
+    print "chunks elapsed time", time.time() - t_start
+    #print "n chunks",n_chunks
+    img = Image.fromarray(getNumpyImageFromString(img,shape))
     t_start = time.time()
-    img = Image.fromarray(buildFromChunks(chunks,n_chunks,shape,n_pixels))
-    print "rebuild elapsed time", t_start - time.time()
+    #img = Image.fromarray(buildFromChunks(chunks,n_chunks,shape,n_pixels))
+    print "rebuild elapsed time", time.time() - t_start
     img.show()
