@@ -50,6 +50,8 @@ print("connected.  type stuff")
 print("Reading image and preparing chunks")
 from PIL import Image
 img_ = Image.open('test.png')
+# downsize the image
+img_ = img_.resize((100,100),Image.ANTIALIAS)
 img_ = np.array(img_)
 t_start = time.time()
 shape = img_.shape
@@ -62,10 +64,12 @@ data="image_coding,"+str(shape[0])+"x"+str(shape[1])+"x"+str(shape[2])+","+str(M
 sock.send(data)
 
 t_start = time.time()
-b = 0
-while b < MSGLEN:
-    b = b + sock.send(img[b:])
-    print "sent ", b,"/",MSGLEN, " bytes"
+#b = 0
+#while b < MSGLEN:
+#    b = b + sock.send(img[b:])
+#    #print "sent ", b,"/",MSGLEN, " bytes"
+sock.sendall(img)
 print 'Image sent in', time.time() - t_start, " seconds"
+
 
 sock.close()
