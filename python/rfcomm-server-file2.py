@@ -111,6 +111,7 @@ while True:
             from PIL import Image
             #print 'Length msg', len(msg)
             img = Image.fromarray(ic.getNumpyImageFromString(msg,shape))
+            img = img.resize((484,382),Image.ANTIALIAS)
             img.show()
 
 

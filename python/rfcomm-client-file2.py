@@ -39,7 +39,7 @@ port = first_match["port"]
 name = first_match["name"]
 host = first_match["host"]
 
-print("connecting to \"%s\" on %s" % (name, host))
+print("connecting to \"%s\" on %s port: %s" % (name, host,port))
 
 # Create the client socket
 sock=BluetoothSocket( RFCOMM )
@@ -64,8 +64,8 @@ sock.send(data)
 t_start = time.time()
 b = 0
 while b < MSGLEN:
-    b = b + sock.send(img[b:])
-    print "sent ", b,"/",MSGLEN, " bytes"
+    b = b + sock.send(img[b:],)
+    #print "sent ", b,"/",MSGLEN, " bytes"
 print 'Image sent in', time.time() - t_start, " seconds"
 
 sock.close()
