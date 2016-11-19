@@ -61,10 +61,11 @@ MSGLEN = len(img)
 data="image_coding,"+str(shape[0])+"x"+str(shape[1])+"x"+str(shape[2])+","+str(MSGLEN)
 sock.send(data)
 
+t_start = time.time()
 b = 0
 while b < MSGLEN:
     b = b + sock.send(img[b:])
     print "sent ", b,"/",MSGLEN, " bytes"
-
+print 'Image sent in', time.time() - t_start, " seconds"
 
 sock.close()

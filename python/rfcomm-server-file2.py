@@ -72,42 +72,45 @@ while True:
         # if the connection is lost this will raise up an exception and
         # we can detect the connection has been dropped off
         data = client_sock.recv(1024)
-        print "data legnth:", len(data)
-        if not( len(data) == 0): 
+        n_bytes = len(data)
+        if not( n_bytes == 0):
             if data[0:12] == "image_coding":
                 data_splitted =  data.split(',')
                 shape = data_splitted[1].split('x')
-                shape = np.array([shape[0],shape[1],shape[2]],dtype='uint32')
+                print shape
+                shape = np.array([int(shape[0]),int(shape[1]),int(shape[2])],dtype='uint32')
+                print shape
                 #print shape
                 #chunks = np.empty([shape[0]*shape[1]*shape[2]],dtype='uint8')
                 msg = ''
                 MSGLEN = int(data_splitted[2])
                 b = 0 # counter of bytes
-                print "Receiving image with shape ", shape, " and ", MSGLEN , " bytes\n"
-            else:
+                #print "Receiving image with shape ", shape, " and ", MSGLEN , " bytes\n"
 
+            else:
+                b = b + n_bytes
                 if b > MSGLEN:
-                    print "You received more than ", MSGLEN, " bytes! Something has gone wrong."
+                    #print "You received more than ", MSGLEN, " bytes! Something has gone wrong."
                     sys.exit(2)
-                elif b < MSGLEN:
+                else:
                     if data == '':
                         raise RuntimeError, "connessione socket interrotta"
-                    msg = msg + chunk
+                    msg = msg + data
 
         else:
             b = 0
-
         # in such a way we can modify the last printed line and have a nicer view :)
         
-        #sys.stdout.write("\033[F") # cursor up one line            
-        print b, "/" , MSGLEN , " bytes received"
-        if n_chunks_ > n_chunks:
-            print "You received more than ", MSGLEN, " bytes! Something has gone wrong."
-            sys.exit(2)
+        #sys.stdout.write("\033[F") # cursor up one line
+
+        #sys.stdout.write("\033[F") # cursor up one line
+        #print b, "/" , MSGLEN , " bytes received"
 
         if b == MSGLEN:
             print "Finished receiving the message! "
-            img = Image.fromarray(ic.getNumpyImageFromString(msg))
+            from PIL import Image
+            #print 'Length msg', len(msg)
+            img = Image.fromarray(ic.getNumpyImageFromString(msg,shape))
             img.show()
 
 
