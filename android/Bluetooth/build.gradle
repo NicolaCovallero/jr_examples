@@ -1,8 +1,0 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
-android {
-    compileSdkVersion 24
-    buildToolsVersion '24.0.0'
-}
-dependencies {
-}
