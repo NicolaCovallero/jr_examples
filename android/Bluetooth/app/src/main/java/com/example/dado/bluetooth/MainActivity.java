@@ -247,6 +247,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("FUCK","FUCK");
                     // Read from the InputStream
                     bytes = ddInStream.read(buffer);
+                    Log.d("COMUNICAZIONE", bytes+"");
                     // Send the obtained bytes to the Log
                     Log.d("CHIACCHERATA", "dasdasdasdsdd");
                     /*mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)

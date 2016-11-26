@@ -41,12 +41,12 @@ sock.connect((host, port))
 
 print("connected.  type stuff")
 while True:
-    data = input()
-    if len(data) == 0: break
-    sock.send(data)
+    #data = input()
+    #if len(data) == 0: break
+    #sock.send(data)
 
     # wait for the response of the server which will send back "data"
     data_received = sock.recv(1024)
-    print("received [%s]" % data)
+    print("received [%s]" % data_received)
 
 sock.close()
