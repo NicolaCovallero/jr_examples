@@ -1,5 +1,5 @@
 package com.example.dado.bluetooth;
-// comment to test gita
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -24,13 +24,15 @@ import java.util.UUID;
 public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter ba;
     private Set<BluetoothDevice> devices;
-    private BluetoothDevice piDevice = null;
+    private BluetoothDevice piDevice = null;//Raspberrypi bluetooth device
     private ConnectThread newConnection = null;
     private ConnectedThread currentConnection = null;
 
     private Button startConnectionPi = null;
     private Button stopConnectionPi = null;
     private Button communicationPi = null;
+
+    final String MAC = "00:15:83:E8:49:2D";//CHANGE STRING WHEN CHANGE RASPBERRYPI
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,10 +66,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Log.d("COMMUNICAZIONE", "Comunicazione avviata");
-                currentConnection.run();
+                //currentConnection.run();
                 Log.d("COMMUNICAZIONE", "Comunicazione attiva");
-                currentConnection.write("ciao".getBytes());
+                //currentConnection.write("ciao".getBytes());
                 Log.d("COMMUNICAZIONE", "Inviata parola");
+                currentConnection.run();
             }
         });
 
@@ -101,13 +104,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void paredDevices(){
+
         String list = "";
+        String dAddress = "";
 
         devices = ba.getBondedDevices();
 
         //Log.d("Passaggio1","Passato");
 
         for(BluetoothDevice bd: devices){
+            dAddress = bd.getAddress();
+            if(dAddress.equals(MAC))
+                piDevice = bd;
             list+= bd.getName() + ";";
         }
 
@@ -121,42 +129,54 @@ public class MainActivity extends AppCompatActivity {
 
     private void Discovering(){
 
-        boolean discovery = ba.startDiscovery();
-        Log.d("Discovering",discovery+"");
+        paredDevices();
 
-        final BroadcastReceiver dReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
+        if(piDevice != null){
+            Log.d("PASSAGGIO", "Found raspberry");
 
-                String action = intent.getAction();
-                String dName = "";
-                String dAddress = "";
+            newConnection = new ConnectThread(piDevice);
+            startConnectionPi.setEnabled(true);
+            Log.d("Connecting", "Connecting with Raspberry");
+        }
+        else {
 
-                // When discovery finds a device
-                if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                    // Get the BluetoothDevice object from the Intent
-                    BluetoothDevice tmpDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    // Add the name and address to an array adapter to show in a ListView
-                    Log.d("Device", tmpDevice.getName() + " - " + tmpDevice.getAddress());
-                    dName = tmpDevice.getName();
-                    dAddress = tmpDevice.getAddress();
+            boolean discovery = ba.startDiscovery();
+            Log.d("Discovering", discovery + "");
 
-                    if(dAddress.equals("B8:27:EB:20:53:7F")){
-                        Log.d("PASSAGGIO", "Trovato raspberry");
-                        piDevice = tmpDevice;
+            final BroadcastReceiver dReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
 
-                        newConnection = new ConnectThread(piDevice);
-                        startConnectionPi.setEnabled(true);
-                        Log.d("Connecting", "Connessione con raspberrypi");
+                    String action = intent.getAction();
+                    String dName = "";
+                    String dAddress = "";
+
+                    // When discovery finds a device
+                    if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                        // Get the BluetoothDevice object from the Intent
+                        BluetoothDevice tmpDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                        // Add the name and address to an array adapter to show in a ListView
+                        Log.d("Device", tmpDevice.getName() + " - " + tmpDevice.getAddress());
+                        dName = tmpDevice.getName();
+                        dAddress = tmpDevice.getAddress();
+
+                        if (dAddress.equals(MAC)) {
+                            Log.d("PASSAGGIO", "Trovato raspberry");
+                            piDevice = tmpDevice;
+
+                            newConnection = new ConnectThread(piDevice);
+                            startConnectionPi.setEnabled(true);
+                            Log.d("Connecting", "Connessione con raspberrypi");
+                        }
                     }
+
                 }
+            };
 
-            }
-        };
-
-        // Register the BroadcastReceiver
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(dReceiver, filter); // Don't forget to unregister during onDestroy
+            // Register the BroadcastReceiver
+            IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            registerReceiver(dReceiver, filter); // Don't forget to unregister during onDestroy
+        }
 
     }
 
@@ -244,15 +264,14 @@ public class MainActivity extends AppCompatActivity {
             // Keep listening to the InputStream until an exception occurs
             while (true) {
                 try {
-                    Log.d("FUCK","FUCK");
                     // Read from the InputStream
                     bytes = ddInStream.read(buffer);
+                    String readMessage = new String(buffer, 0, bytes);
+                    Log.d("RICEVUTO", readMessage);
                     // Send the obtained bytes to the Log
-                    Log.d("CHIACCHERATA", "dasdasdasdsdd");
                     /*mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
                             .sendToTarget();*/
                 } catch (IOException e) {
-                    Log.d("RI-FUCK","RI-FUCK");
                     break;
                 }
             }
@@ -268,6 +287,7 @@ public class MainActivity extends AppCompatActivity {
         /* Call this from the main activity to shutdown the connection */
         public void cancel() {
             try {
+                Log.d("CANCEL", "Cancellazione connessione");
                 ddSocket.close();
             } catch (IOException e) { }
         }
