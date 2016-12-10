@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private Set<BluetoothDevice> devices;
     private BluetoothDevice piDevice = null;//Raspberrypi bluetooth device
     private ConnectThread newConnection = null;
-    private ConnectedThread currentConnection = null;
+    private CommunicationThread currentCommunication = null;
 
     private Button startConnectionPi = null;
     private Button stopConnectionPi = null;
@@ -41,11 +41,13 @@ public class MainActivity extends AppCompatActivity {
 
         ba = BluetoothAdapter.getDefaultAdapter();
 
+
         startConnectionPi = (Button) findViewById(R.id.button_start);
         startConnectionPi.setEnabled(false);
         startConnectionPi.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                newConnection = new ConnectThread(piDevice);
                 newConnection.run();
                 stopConnectionPi.setEnabled(true);
             }
@@ -57,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 newConnection.cancel();
+                currentCommunication.cancel();
+                communicationPi.setEnabled(false);
+                stopConnectionPi.setEnabled(false);
             }
         });
 
@@ -65,12 +70,11 @@ public class MainActivity extends AppCompatActivity {
         communicationPi.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d("COMMUNICAZIONE", "Comunicazione avviata");
-                //currentConnection.run();
                 Log.d("COMMUNICAZIONE", "Comunicazione attiva");
-                //currentConnection.write("ciao".getBytes());
-                Log.d("COMMUNICAZIONE", "Inviata parola");
-                currentConnection.run();
+                /*currentConnection.write("ciao".getBytes());
+                Log.d("COMMUNICAZIONE", "Inviata parola");*/
+                Log.d("COMMUNICAZIONE", "Comunicazione avviata");
+                new Thread(currentCommunication).start();
             }
         });
 
@@ -134,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         if(piDevice != null){
             Log.d("PASSAGGIO", "Found raspberry");
 
-            newConnection = new ConnectThread(piDevice);
+            //newConnection = new ConnectThread(piDevice);
             startConnectionPi.setEnabled(true);
             Log.d("Connecting", "Connecting with Raspberry");
         }
@@ -164,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
                             Log.d("PASSAGGIO", "Trovato raspberry");
                             piDevice = tmpDevice;
 
-                            newConnection = new ConnectThread(piDevice);
+                            //newConnection = new ConnectThread(piDevice);
                             startConnectionPi.setEnabled(true);
                             Log.d("Connecting", "Connessione con raspberrypi");
                         }
@@ -222,7 +226,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             // Do work to manage the connection (in a separate thread)
-            currentConnection = new ConnectedThread(ddSocket);
+            currentCommunication = new CommunicationThread(ddSocket);
             communicationPi.setEnabled(true);
         }
 
@@ -230,16 +234,17 @@ public class MainActivity extends AppCompatActivity {
         public void cancel() {
             try {
                 ddSocket.close();
+                Log.d("CANCEL", "Cancellazione connessione");
             } catch (IOException e) { }
         }
     }
 
-    private class ConnectedThread extends Thread {
+    private class CommunicationThread extends Thread {
         private final BluetoothSocket ddSocket;
         private final InputStream ddInStream;
         private final OutputStream ddOutStream;
 
-        public ConnectedThread(BluetoothSocket socket) {
+        public CommunicationThread(BluetoothSocket socket) {
             ddSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
@@ -258,20 +263,25 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             byte[] buffer = new byte[1024];  // buffer store for the stream
             int bytes; // bytes returned from read()
+            String counter = "0";
+            int counterTmp = 0;
 
             Log.d("RUNNED","RUNNED");
 
             // Keep listening to the InputStream until an exception occurs
             while (true) {
                 try {
+                    Log.d("INVIATO", counter);
+                    currentCommunication.write(counter.getBytes());
                     // Read from the InputStream
                     bytes = ddInStream.read(buffer);
-                    String readMessage = new String(buffer, 0, bytes);
-                    Log.d("RICEVUTO", readMessage);
-                    // Send the obtained bytes to the Log
-                    /*mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-                            .sendToTarget();*/
+                    //String readMessage = new String(buffer, 0, bytes);
+                    counter = new String(buffer, 0, bytes);
+                    Log.d("RICEVUTO", counter);
+                    counterTmp = Integer.parseInt(counter) + 1;
+                    counter = counterTmp + "";
                 } catch (IOException e) {
+                    Log.d("Exception",e.toString());
                     break;
                 }
             }
