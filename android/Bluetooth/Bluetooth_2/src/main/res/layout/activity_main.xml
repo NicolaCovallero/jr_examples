@@ -14,13 +14,11 @@
         android:text="START"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="46dp"
+        android:id="@+id/button_start"
         android:layout_alignParentTop="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginLeft="31dp"
-        android:layout_marginStart="31dp"
-        android:layout_marginTop="48dp"
-        android:id="@+id/button_start" />
+        android:layout_toLeftOf="@+id/button_communication"
+        android:layout_toStartOf="@+id/button_communication" />
 
     <Button
         android:text="Communication"
@@ -36,10 +34,24 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/button_stop"
-        android:layout_alignBaseline="@+id/button_start"
-        android:layout_alignBottom="@+id/button_start"
+        android:layout_alignTop="@+id/button_start"
         android:layout_toRightOf="@+id/button_communication"
-        android:layout_toEndOf="@+id/button_communication"
-        android:layout_marginLeft="11dp"
-        android:layout_marginStart="11dp" />
+        android:layout_toEndOf="@+id/button_communication" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:id="@+id/textView"
+        android:width="350dp"
+        android:height="200dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:background="#000000"
+        android:maxLines = "1000"
+        android:gravity="bottom"
+        android:scrollbars = "vertical"
+        android:textColor="#00ff08"
+        android:textIsSelectable="false" />
+
 </RelativeLayout>
