@@ -61,19 +61,24 @@ while not connection_:
 
 
 print("Accepted connection from ", client_info)
-
+counter = 0
 while True:
     try:
         # if the connection is lost this will raise up an exception and
         # we can detect the connection has been dropped off
-        data = client_sock.recv(1024)
-        if not( len(data) == 0):
-            print("received [%s]" % data)
+        #data = client_sock.recv(1024)
+        #if not( len(data) == 0):
+        #    print("received [%s]" % data)
             # send back the data
-            client_sock.send(data)
+        #    client_sock.send(data)
+	if counter < 5:
+		client_sock.send("ciao__cazzone")
+	counter = counter + 1
 
-    except IOError:
+    except IOError, e:
         print "connection lost with: ", client_info
+	print "Error number:", e.errno
+        print "Error:",e 
         print "Waiting for connection on RFCOMM channel "+ str(port)
         counter = counter + 1
         # connection_ is a boolean variable to keep track if there is or not a pairing
