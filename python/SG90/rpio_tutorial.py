@@ -9,8 +9,8 @@ def exit_(p):
 	GPIO.cleanup()
 
 # physical pins number
-#PIN = 12 # yaw
-PIN = 16 # pitch
+PIN = 12 # yaw
+#PIN = 16 # pitch
 print "PIN:", PIN
 
 GPIO.setmode(GPIO.BOARD)
