@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Johnny Robot Controller</string>
+
+    <string name="title_activity_controller">Controller</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+
+    <string name="title_activity_controller_ui">ControllerUI</string>
+
+    <string name="title_activity_fullactivity_example">fullactivity_example</string>
+
+    <string name="description">Background</string>
+    <string name="descriptionJoystick">Joystick</string>
+</resources>

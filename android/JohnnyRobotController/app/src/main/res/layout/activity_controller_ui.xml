@@ -1,0 +1,84 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff"
+    tools:context="com.example.nicola.johnnyrobotcontroller.ControllerUI">
+
+    <!-- The primary full-screen view. This can be replaced with whatever view
+         is needed to present your content, e.g. VideoView, SurfaceView,
+         TextureView, etc. -->
+
+    <!-- This FrameLayout insets its children based on system windows using
+         android:fitsSystemWindows. -->
+
+
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/backgroundView"
+        android:clickable="false"
+        android:contentDescription="@string/description"
+        android:src="@drawable/joystick" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true">
+
+        <ImageView
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:id="@+id/imageView2"
+            android:layout_gravity="right|bottom"
+            android:contentDescription="@string/descriptionJoystick"
+            android:src="@drawable/joystick_background" />
+
+        <ImageView
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:id="@+id/imageView3"
+            android:layout_gravity="left|bottom"
+            android:contentDescription="@string/descriptionJoystick"
+            android:src="@drawable/joystick_background" />
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:id="@+id/cameraControllerView"
+            android:layout_gravity="right|bottom"
+            android:contentDescription="@string/descriptionJoystick"
+            android:src="@drawable/joystick"
+            android:layout_marginRight="30dp"
+            android:layout_marginBottom="30dp" />
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:id="@+id/motorsControllerView"
+            android:layout_gravity="left|bottom"
+            android:contentDescription="@string/descriptionJoystick"
+            android:src="@drawable/joystick"
+            android:layout_marginLeft="30dp"
+            android:layout_marginBottom="30dp" />
+
+        <TextView
+            android:layout_width="200dp"
+            android:layout_height="70dp"
+            android:layout_marginBottom="20dp"
+            android:layout_gravity="center_horizontal|bottom"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:id="@+id/textView_terminal"
+            android:textColor="#00ff11"
+            android:maxLines="1000"
+            android:gravity="bottom"
+            android:scrollbars="vertical"
+            android:textIsSelectable="false"
+            android:textSize="12sp"/>
+
+
+    </FrameLayout>
+
+
+</FrameLayout>
