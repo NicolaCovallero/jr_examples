@@ -74,7 +74,7 @@ while True:
         data = client_sock.recv(1024)
         n_bytes = len(data)
         if not( n_bytes == 0):
-            if data[0:12] == "image_coding":
+            if data[1:12] == "image_coding":
                 data_splitted =  data.split(',')
                 shape = data_splitted[1].split('x')
                 print shape
