@@ -1,5 +1,7 @@
 package com.example.nicola.johnnyrobotcontroller;
 
+import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -25,6 +27,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
+import android.widget.Toast;
+
 import java.util.Calendar;
 
 
@@ -38,13 +42,41 @@ public class MainActivity extends AppCompatActivity {
     private TextView textView_terminal;
     private boolean connection_wifi = true; // false when the connection is via bluetooth
     private Handler textHandler;
+    protected Handler mHandler;
+
+    private int max_discovering_time = 10000; // 10 sec
+    private BluetoothConnection blue_connection;// bluetooth connection
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        blue_connection = new BluetoothConnection();
+        if (!blue_connection.isEnabled()) {
+            Toast.makeText(getApplicationContext(), "Bluetooth not activated", Toast.LENGTH_SHORT).show();
+
+            Intent on = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(on, 0);
+
+        } else {
+            Toast.makeText(getApplicationContext(), "Bluetooth activated", Toast.LENGTH_SHORT).show();
+        }
+
         button_connect = (Button) findViewById(R.id.button_connect);
+        button_connect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //new RingDialog().execute(v);
+                if(! connection_wifi)
+                {
+                    final RingDialog rd = new RingDialog();
+                    rd.launchRingDialog(v);
+                    writeTerminal("Connecting via Bluetooth...");
+                }
+            }
+        });
+
         button_start = (Button) findViewById(R.id.button_start);
         textView_terminal = (TextView) findViewById(R.id.textView_terminal);
         textView_terminal.setMovementMethod(new ScrollingMovementMethod());
@@ -181,14 +213,7 @@ public class MainActivity extends AppCompatActivity {
      * @return
      */
     private Void writeTerminal(String text){
-//        String text_view_text=textView_terminal.getText().toString();
-//        StringBuffer sb=new StringBuffer(text_view_text);
-//        Calendar calendar = Calendar.getInstance();
-//        sb.append("[" + String.valueOf(calendar.get(Calendar.HOUR)) + ":" +
-//                String.valueOf(calendar.get(Calendar.MINUTE)) + ":" +
-//                String.valueOf(calendar.get(Calendar.SECOND)) + "]" +
-//                text + "\n");
-//        textView_terminal.setText(sb.toString());
+
         Calendar calendar = Calendar.getInstance();
         textView_terminal.append("[" + String.valueOf(calendar.get(Calendar.HOUR)) + ":" +
                 String.valueOf(calendar.get(Calendar.MINUTE)) + ":" +
@@ -197,5 +222,90 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+
+    private class RingDialog {
+        protected int state;
+
+        public RingDialog(){
+            state = 0;
+            /**
+             * This handler is executed in the UI Thread when it receives a Message
+             * which could have some information, in this case this handler manage to enable
+             * STOP and COMMUNICATION buttons when it receives a message (which is send when the
+             * connection has been established or time out happened), and check if effectively the
+             * connection has been established (inputMessage.what == 1).
+             * NOTE: This handler can de deefined in whatever part/subclass of the code (by the way it is executed
+             * in the main Thread), but it is better to declear it
+             * as member of the mainActivity.
+             */
+            mHandler = new Handler(Looper.getMainLooper()) {
+                /*
+                 * handleMessage() defines the operations to perform when
+                 * the Handler receives a new Message to process.
+                 */
+                @Override
+                public void handleMessage(Message inputMessage) {
+                    if (inputMessage.what == 1) {
+                        Log.d("handleMessage", "enabling buttons");
+                        //stopConnectionPi.setEnabled(true);
+                        //communicationPi.setEnabled(true);
+                        writeTerminal("Connected with Johnny! :)");
+
+                    }
+                    else
+                    {
+                        Toast.makeText(getApplicationContext(), "Impossible to connect to the robot, try it again.", Toast.LENGTH_SHORT).show();
+                        writeTerminal("Impossible to connect to the robot, try it again.");
+                    }
+                }
+            };
+        }
+
+        /**
+         * It shows a ring dialong which spins until timeout or the connection has been established
+         * @param view
+         */
+        public void launchRingDialog(View view) {
+            final ProgressDialog ringProgressDialog = ProgressDialog.show(MainActivity.this, "Please wait ...", "Searching for Johnny Robot ... where is he? ", true);
+            ringProgressDialog.setCancelable(false); // prevent to close when touched outside the dialog box
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        blue_connection.DiscoverDevices();
+                        blue_connection.ConnectToRobot();
+
+                        // continue until the connection has been established
+                        int counter = 0;
+                        while (blue_connection.connectionState() == 3 && (counter < max_discovering_time)) {
+                            Thread.sleep(100);
+                            counter += 100;
+                        }
+                        if ((counter >= max_discovering_time)) {
+                            state = 0;
+                            Log.d("Maximum discoverying time exceeded", ".....");
+                            writeTerminal("Maximum discoverying time exceeded...");
+                        } else if (blue_connection.connectionState() == 1) {
+                            state = 1;
+                        }
+
+                    } catch (Exception e) {
+                        Log.d("RING DIALOG EXECEPTION", e.getMessage());
+                    }
+
+                    ringProgressDialog.dismiss();
+
+                    /**
+                     * Prepare the message for the mHandler
+                     */
+                    Message completeMsg = mHandler.obtainMessage(state);
+                    /**
+                     * Sending the message to mHandler
+                     */
+                    completeMsg.sendToTarget();
+                }
+            }).start();
+        }
+    }
 
 }
