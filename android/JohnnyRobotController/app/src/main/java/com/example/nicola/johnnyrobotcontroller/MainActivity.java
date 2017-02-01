@@ -5,9 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -16,17 +14,11 @@ import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
-import android.view.MotionEvent;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.graphics.drawable.BitmapDrawable;
 import android.widget.Toast;
 
 import java.util.Calendar;
@@ -44,32 +36,37 @@ public class MainActivity extends AppCompatActivity {
     private Handler textHandler;
     protected Handler mHandler;
 
-    private int max_discovering_time = 10000; // 10 sec
-    private BluetoothConnection blue_connection;// bluetooth connection
+    private int max_discovering_time = 20000; // 10 sec
+    private BluetoothConnection motors_blue_connection, camera_motors_blue_connection;// bluetooth connection
+
+    final private String MAC = "00:15:83:E8:49:2D";//"00:15:83:E8:49:2D";//CHANGE STRING WHEN CHANGE RASPBERRYPI
+    final private String DRIVING_SERVICE_UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ed";
+    final private String DRIVING_CAMERA_SERVICE_UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ec";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        blue_connection = new BluetoothConnection();
-        if (!blue_connection.isEnabled()) {
-            Toast.makeText(getApplicationContext(), "Bluetooth not activated", Toast.LENGTH_SHORT).show();
+        motors_blue_connection = new BluetoothConnection();
+        motors_blue_connection.setMACAddress(MAC);
+        motors_blue_connection.setServiceUUID(DRIVING_SERVICE_UUID);
+        motors_blue_connection.setSocketDescription("wheels motors");
 
-            Intent on = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(on, 0);
-
-        } else {
-            Toast.makeText(getApplicationContext(), "Bluetooth activated", Toast.LENGTH_SHORT).show();
-        }
+        camera_motors_blue_connection = new BluetoothConnection();
+        camera_motors_blue_connection.setMACAddress(MAC);
+        camera_motors_blue_connection.setServiceUUID(DRIVING_CAMERA_SERVICE_UUID);
+        camera_motors_blue_connection.setSocketDescription("camera motors");
 
         button_connect = (Button) findViewById(R.id.button_connect);
         button_connect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //new RingDialog().execute(v);
                 if(! connection_wifi)
                 {
+                    motors_blue_connection.closeConnection();
+                    camera_motors_blue_connection.closeConnection();
+
                     final RingDialog rd = new RingDialog();
                     rd.launchRingDialog(v);
                     writeTerminal("Connecting via Bluetooth...");
@@ -111,12 +108,23 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (cb_bluetooth.isChecked()) {
+                    if (!motors_blue_connection.isEnabled()) {
+                        Toast.makeText(getApplicationContext(), "Bluetooth not activated", Toast.LENGTH_SHORT).show();
+                        Intent on = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                        startActivityForResult(on, 0);
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Bluetooth activated", Toast.LENGTH_SHORT).show();
+                    }
+
                     connection_wifi = false;
                     cb_bluetooth.setChecked(true);
                     cb_wifi.setChecked(false);
                     writeTerminal("Chosen bluetooth communication, good choice bro! ;)");
+
+
                 }
                 else {
+                    BluetoothAdapter.getDefaultAdapter().disable();
                     connection_wifi = true;
                     cb_bluetooth.setChecked(false);
                     cb_wifi.setChecked(true);
@@ -130,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (cb_wifi.isChecked()) {
+                    BluetoothAdapter.getDefaultAdapter().disable();
                     connection_wifi = true;
                     cb_bluetooth.setChecked(false);
                     cb_wifi.setChecked(true);
@@ -137,6 +146,14 @@ public class MainActivity extends AppCompatActivity {
                             " communicate with johnny via wifi :(");
                 }
                 else {
+                    if (!motors_blue_connection.isEnabled()) {
+                        Toast.makeText(getApplicationContext(), "Bluetooth not activated", Toast.LENGTH_SHORT).show();
+                        Intent on = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                        startActivityForResult(on, 0);
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Bluetooth activated", Toast.LENGTH_SHORT).show();
+                    }
+
                     connection_wifi = false;
                     cb_bluetooth.setChecked(true);
                     cb_wifi.setChecked(false);
@@ -150,6 +167,8 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 startControllerActivity();
             }
+
+
         });
 
 
@@ -201,9 +220,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startControllerActivity(){
-        Intent intent = new Intent(this, ControllerUI.class);
-        //Intent intent = new Intent(this, fullactivity_example.class);
-        //intent.putExtra(EXTRA_MESSAGE, message);
+
+        Singleton.getInstance().setString("Singleton");
+        Singleton.getInstance().setMotorsBluetoothConnection(this.motors_blue_connection);
+        Singleton.getInstance().setCameraMotorsBluetoothConnection(this.camera_motors_blue_connection);
+        Intent intent = new Intent(this,ControllerUI.class);
         startActivity(intent);
     }
 
@@ -212,14 +233,13 @@ public class MainActivity extends AppCompatActivity {
      * @param text
      * @return
      */
-    private Void writeTerminal(String text){
+    private void writeTerminal(String text){
 
         Calendar calendar = Calendar.getInstance();
         textView_terminal.append("[" + String.valueOf(calendar.get(Calendar.HOUR)) + ":" +
                 String.valueOf(calendar.get(Calendar.MINUTE)) + ":" +
                 String.valueOf(calendar.get(Calendar.SECOND)) + "]" +
                 text + "\n");
-        return null;
     }
 
 
@@ -272,12 +292,17 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     try {
-                        blue_connection.DiscoverDevices();
-                        blue_connection.ConnectToRobot();
+                        // connect to the motors driving service
+                        motors_blue_connection.DiscoverDevices();
+                        motors_blue_connection.ConnectToRobot();
+
+                        // connect to the camera motors driving service
+                        camera_motors_blue_connection.DiscoverDevices();
+                        camera_motors_blue_connection.ConnectToRobot();
 
                         // continue until the connection has been established
                         int counter = 0;
-                        while (blue_connection.connectionState() == 3 && (counter < max_discovering_time)) {
+                        while (camera_motors_blue_connection.connectionState() == 3 && (counter < max_discovering_time)) {
                             Thread.sleep(100);
                             counter += 100;
                         }
@@ -285,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
                             state = 0;
                             Log.d("Maximum discoverying time exceeded", ".....");
                             writeTerminal("Maximum discoverying time exceeded...");
-                        } else if (blue_connection.connectionState() == 1) {
+                        } else if (camera_motors_blue_connection.connectionState() == 1) {
                             state = 1;
                         }
 
@@ -306,6 +331,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
     }
 
 }

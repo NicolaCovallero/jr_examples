@@ -1,24 +1,24 @@
 package com.example.nicola.johnnyrobotcontroller;
 
 import android.annotation.SuppressLint;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Point;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
+import android.bluetooth.BluetoothAdapter;
+import android.net.Uri;
+import android.os.SystemClock;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
-import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.util.Calendar;
 
@@ -50,11 +50,18 @@ public class ControllerUI extends AppCompatActivity {
     private TextView textView_terminal;
     private ImageView motorsJoystick, cameraJoystick;
 
+    private BluetoothConnection motors_blue_connection, camera_motors_blue_connection;// bluetooth connection
+
     // zero coordinates of joysticks
-    private float camera_zx,camera_zy, motors_zx, motors_zy;
+    private float camera_zx, camera_zy, motors_zx, motors_zy;
 
     // relative coordinates of joysticks
-    private float camera_x,camera_y, motors_x, motors_y;
+    private float camera_x, camera_y, motors_x, motors_y;
+    private double motors_angle, motors_mag; // joystick variable
+    private double camera_angle, camera_mag; // joystick variable
+    private double camera_yaw_angle, camera_pitch_angle;
+
+    protected boolean status_on;
 
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
@@ -103,9 +110,15 @@ public class ControllerUI extends AppCompatActivity {
             return false;
         }
     };
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        status_on = true; // ON
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_controller_ui);
@@ -134,54 +147,56 @@ public class ControllerUI extends AppCompatActivity {
         cameraJoystick.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+
+                float MAG_MAX = 100;
+
                 if (event.getAction() == MotionEvent.ACTION_DOWN ||
                         event.getAction() == MotionEvent.ACTION_MOVE) {
 
 
                     writeTerminal("Touch coordinates : " +
                             String.valueOf(event.getX()) + "x  " + String.valueOf(event.getY()) + " Y");
-    //                float dx = v.getWidth()/2 - event.getX() ;
-    //                float dy = v.getHeight()/2 - event.getY() ;
-                    float x = v.getWidth()/2 - event.getX() ;
-                    float y = v.getHeight()/2 - event.getY() ;
+                    //                float dx = v.getWidth()/2 - event.getX() ;
+                    //                float dy = v.getHeight()/2 - event.getY() ;
+                    float x = v.getWidth() / 2 - event.getX();
+                    float y = v.getHeight() / 2 - event.getY();
 
                     // smooth movement
                     float th = 5;
-                    if ((camera_x - x) < th){
+                    if ((camera_x - x) < th) {
                         camera_x = camera_x + th;
-                    }
-                    else if ((camera_x + x) < th){
+                    } else if ((camera_x + x) < th) {
                         camera_x = camera_x - th;
                     }
-                    if ((camera_y - y) < th){
+                    if ((camera_y - y) < th) {
                         camera_y = camera_y + th;
-                    }
-                    else if ((camera_y + y) < th){
+                    } else if ((camera_y + y) < th) {
                         camera_y = camera_y - th;
                     }
 
                     // compute now the angle
-                    double angle = Math.atan2(camera_x,camera_y);
+                    camera_angle = Math.atan2(camera_x, camera_y);
 
                     // compute radius
-                    double mag = Math.sqrt(Math.pow(camera_x,2) + Math.pow(camera_y,2));
+                    camera_mag = Math.sqrt(Math.pow(camera_x, 2) + Math.pow(camera_y, 2));
 
-                    float MAG_MAX = 100;
-                    if (mag >= MAG_MAX){
-                        camera_x = (float)Math.cos(angle) * MAG_MAX;
-                        camera_y = (float)Math.sin(angle) * MAG_MAX;
+                    if (camera_mag >= MAG_MAX) {
+                        camera_x = (float) Math.cos(camera_angle) * MAG_MAX;
+                        camera_y = (float) Math.sin(camera_angle) * MAG_MAX;
                     }
 
                     v.setX(camera_zx - camera_x);
                     v.setY(camera_zy - camera_y);
-                }
-                else if(event.getAction() == MotionEvent.ACTION_UP)
-                {
+                } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    // reset values
                     v.setX(camera_zx);
                     v.setY(camera_zy);
                     camera_x = 0;
                     camera_y = 0;
+                    camera_angle = 0;
+                    camera_mag = 0;
                 }
+                camera_yaw_angle = (camera_x / MAG_MAX) * 90;
                 return true;
             }
         });
@@ -197,58 +212,55 @@ public class ControllerUI extends AppCompatActivity {
                     float x = v.getWidth() / 2 - event.getX();
                     float y = v.getHeight() / 2 - event.getY();
 
-                    double mag_xy = Math.sqrt(Math.pow( motors_x - x, 2) + Math.pow(motors_y - y, 2));
-                    Log.d("magnitude: ", String.valueOf(mag_xy));
+                    double mag_xy = Math.sqrt(Math.pow(motors_x - x, 2) + Math.pow(motors_y - y, 2));
+                    //Log.d("magnitude: ", String.valueOf(mag_xy));
+
                     // smooth movement
                     float th = 5;
-                    if(mag_xy <= 100){
-                        if ((motors_x - x) < th){
+                    if (mag_xy <= 100) {
+                        if ((motors_x - x) < th) {
                             motors_x = motors_x + th;
-                        }
-                        else if ((motors_x + x) < th){
+                        } else if ((motors_x + x) < th) {
                             motors_x = motors_x - th;
-                        }
-                        else{
+                        } else {
                             motors_x = x;
                         }
-                        if ((motors_y - y) < th){
+                        if ((motors_y - y) < th) {
                             motors_y = motors_y + th;
-                        }
-                        else if ((motors_y + y) < th){
+                        } else if ((motors_y + y) < th) {
                             motors_y = motors_y - th;
-                        }
-                        else{
+                        } else {
                             motors_y = y;
                         }
                     }
 
 
-
                     // compute now the angle
-                    double angle = Math.atan2(motors_y, motors_x);
+                    motors_angle = Math.atan2(motors_y, motors_x);
+                    writeTerminal("angle" + String.valueOf(motors_angle));
 
                     // compute radius
-                    double mag = Math.sqrt(Math.pow(motors_x, 2) + Math.pow(motors_y, 2));
+                    motors_mag = Math.sqrt(Math.pow(motors_x, 2) + Math.pow(motors_y, 2));
 
                     float MAG_MAX = 100;
-                    if (mag >= MAG_MAX) {
-                        motors_x = (float) Math.cos(angle) * MAG_MAX;
-                        motors_y = (float) Math.sin(angle) * MAG_MAX;
+                    if (motors_mag >= MAG_MAX) {
+                        motors_x = (float) Math.cos(motors_angle) * MAG_MAX;
+                        motors_y = (float) Math.sin(motors_angle) * MAG_MAX;
                     }
 
                     v.setX(motors_zx - motors_x);
                     v.setY(motors_zy - motors_y);
 
-                }
-                else if(event.getAction() == MotionEvent.ACTION_UP)
-                {
+                } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    // reset values
                     v.setX(motors_zx);
                     v.setY(motors_zy);
                     motors_y = 0;
                     motors_x = 0;
-                    writeTerminal(String.valueOf(motors_zx)+ " /Y " + String.valueOf(motors_zy));
-
+                    motors_angle = 0;
+                    motors_mag = 0;
                 }
+
                 return true;
             }
         });
@@ -279,7 +291,7 @@ public class ControllerUI extends AppCompatActivity {
                 cameraJoystick.getLocationOnScreen(locations);
                 camera_zx = locations[0];
                 camera_zy = locations[1];
-                writeTerminal(String.valueOf(camera_zx)+ " /Y " + String.valueOf(camera_zy));
+                writeTerminal(String.valueOf(camera_zx) + " /Y " + String.valueOf(camera_zy));
 
             }
         });
@@ -290,11 +302,68 @@ public class ControllerUI extends AppCompatActivity {
                 motorsJoystick.getLocationOnScreen(locations);
                 motors_zx = locations[0];
                 motors_zy = locations[1];
-                writeTerminal(String.valueOf(motors_zx)+ " /Y " + String.valueOf(motors_zy));
+                writeTerminal(String.valueOf(motors_zx) + " /Y " + String.valueOf(motors_zy));
 
             }
         });
 
+        motors_blue_connection = Singleton.getInstance().getMotorsBluetoothConnection();
+        camera_motors_blue_connection = Singleton.getInstance().getCameraMotorsBluetoothConnection();
+
+        /*
+        Send periodically a commands to the robot
+         */
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    SystemClock.sleep(5); // sleep 5 ms
+                    if(status_on) {
+                        if (motors_mag > 0) {
+
+                            if (motors_y > 0) {
+                                if (motors_angle > 3 * Math.PI / 4) {
+                                    motors_blue_connection.sendString("right-0");
+                                } else if (motors_angle < Math.PI / 4) {
+                                    motors_blue_connection.sendString("left-0");
+                                } else {
+                                    motors_blue_connection.sendString("forward-0");
+                                }
+                            } else { // motors_y is negative
+                                if (motors_angle < -3 * Math.PI / 4) {
+                                    motors_blue_connection.sendString("right-0");
+                                } else if (motors_angle > -Math.PI / 4) {
+                                    motors_blue_connection.sendString("left-0");
+                                } else {
+                                    motors_blue_connection.sendString("backward-0");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }).start();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    // simple method to synchronize the robot with the bluetooth communication
+                    // is by slowing the thread down
+                    SystemClock.sleep(10); // sleep 10 ms
+                    if(status_on) {
+                        camera_motors_blue_connection.sendStringSync("yaw/" +
+                                String.valueOf(-camera_yaw_angle) + "/pitch/0");
+                    }
+                }
+            }
+        }).start();
+
+
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
     @Override
@@ -355,10 +424,11 @@ public class ControllerUI extends AppCompatActivity {
 
     /**
      * Add a new line of text to the textView_terminal
+     *
      * @param text
      * @return
      */
-    private Void writeTerminal(String text){
+    private Void writeTerminal(String text) {
         Calendar calendar = Calendar.getInstance();
         textView_terminal.append("[" + String.valueOf(calendar.get(Calendar.HOUR)) + ":" +
                 String.valueOf(calendar.get(Calendar.MINUTE)) + ":" +
@@ -366,16 +436,64 @@ public class ControllerUI extends AppCompatActivity {
                 text + "\n");
         // gravity bottom 8set in xml) is not working :(
         // so automatic programmatically scroll is done
-        textView_terminal.scrollBy(0,Integer.MAX_VALUE);
+        textView_terminal.scrollBy(0, Integer.MAX_VALUE);
         return null;
     }
 
-    private void cameraJoystickCallback(){
+    private void cameraJoystickCallback() {
         writeTerminal("clicked camera joystick");
     }
-    private void motorsJoystickCallback(){
+
+    private void motorsJoystickCallback() {
         writeTerminal("clicked motors joystick");
     }
 
 
+    @Override
+    public void onStart() {
+        super.onStart();
+
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "ControllerUI Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.example.nicola.johnnyrobotcontroller/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        status_on = false; // OFF
+    }
+
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        status_on = false; // OFF
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        status_on = true; // ON;
+
+        motors_blue_connection = Singleton.getInstance().getMotorsBluetoothConnection();
+        camera_motors_blue_connection = Singleton.getInstance().getCameraMotorsBluetoothConnection();
+    }
 }

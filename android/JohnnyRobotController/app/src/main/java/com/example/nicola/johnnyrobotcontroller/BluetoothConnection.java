@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 import java.io.IOException;
@@ -26,11 +25,12 @@ public class BluetoothConnection {
     protected Set<BluetoothDevice> devices;
     protected BluetoothDevice piDevice = null;//Raspberrypi bluetooth device
     protected EstablishConnectionThread establishConnection = null;
-    protected ConnectionThread connection = null;
+    //protected ConnectionThread connection = null;
+    protected BluetoothSocket ddSocket;
 
-    final protected String MAC = "00:15:83:E8:49:2D";//"00:15:83:E8:49:2D";//CHANGE STRING WHEN CHANGE RASPBERRYPI
-    final protected String ROBOT_UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ed";
-
+    protected String MAC = "00:15:83:E8:49:2D";//"00:15:83:E8:49:2D";//CHANGE STRING WHEN CHANGE RASPBERRYPI
+    protected String SERVICE_UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ed";
+    protected String socket_description; // description of the socket
 
     protected int CONNECTED = 1;
     protected int NOT_CONNECTED = 2;
@@ -38,29 +38,25 @@ public class BluetoothConnection {
     protected int connection_state; // to specify the state of the connection (CONNECTED OR NOT_CONNECTED)
     protected int communication_state; // variable to specify it is it sending, receiving, or doing nothing
 
-
     public BluetoothConnection()
     {
         Log.d("BluetoothConnection"," called");
         ba = BluetoothAdapter.getDefaultAdapter();
         connection_state = NOT_CONNECTED;
+        socket_description = "default";
     }
 
     /**
      * Class to establish connection with the robot. This is implemented as a Thread.
      */
     private class EstablishConnectionThread extends Thread {
-        private BluetoothSocket ddSocket = null;
-        private BluetoothDevice ddDevice = null;
 
         public EstablishConnectionThread(BluetoothDevice device) {
             // Use a temporary object that is later assigned to mmSocket,
             // because mmSocket is final
             BluetoothSocket tmp = null;
-            ddDevice = device;
 
-            UUID myUUID = UUID.fromString(ROBOT_UUID);
-            Log.d("Debug1","aa");
+            UUID myUUID = UUID.fromString(SERVICE_UUID);
             // Get a BluetoothSocket to connect with the given BluetoothDevice
             try {
                 // MY_UUID is the app's UUID string, also used by the server code
@@ -71,16 +67,12 @@ public class BluetoothConnection {
             ddSocket = tmp;
 
             // this is important to put it inside this initializer.
-            // GENERAL NOTE: is we use a RINGDIAGLOG THREAD (see main activity)
-            // it is possible that we enter the while loop before the thread started effectively
-            // to run EstablishConnectionThread, thus connection_state could be still set to NOT_CONNECTED.
             connection_state = CONNECTING;
 
-            Log.d("Debug2","aa");
         }
 
         public void run() {
-            Log.d("PASSAGGIO", "Eseguito il run");
+            //Log.d("PASSAGGIO", "Eseguito il run");
             ba.cancelDiscovery();
             connection_state = CONNECTING;
 
@@ -99,8 +91,6 @@ public class BluetoothConnection {
                 return;
             }
 
-            // Once the raspberry has been found initialize the connection object
-            connection = new ConnectionThread(ddSocket);
 
         }
 
@@ -111,116 +101,6 @@ public class BluetoothConnection {
                 ddSocket.close();
 
             } catch (IOException e) { }
-        }
-    }
-
-    /**
-     * Simple class which sends repeatdly a message and read it back. This is implemented as a Thread.
-     */
-    private class ConnectionThread extends Thread {
-        private final BluetoothSocket ddSocket;
-        private final InputStream ddInStream;
-        private final OutputStream ddOutStream;
-        private String msg = "DEFAULT MESSAGE";
-        private Handler msgHandler;
-
-        public ConnectionThread(BluetoothSocket socket) {
-            ddSocket = socket;
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
-
-            // Get the input and output streams, using temp objects because
-            // member streams are final
-            try {
-                tmpIn = socket.getInputStream();
-                tmpOut = socket.getOutputStream();
-            } catch (IOException e) { }
-
-            ddInStream = tmpIn;
-            ddOutStream = tmpOut;
-
-        }
-
-        @Override
-        public void run() {
-            byte[] buffer = new byte[1024];  // buffer store for the stream
-            int bytes; // bytes returned from read()
-
-            // Keep listening to the InputStream until an exception occurs
-            while (true) {
-                try {
-                    if(ddSocket.isConnected()) {
-                        // Read from the InputStream
-                        Message msg_ = Message.obtain();
-                        msg_.setTarget(msgHandler);
-                        if(msg_.getTarget() != null) {
-                            msg_.obj = "Sending:" + msg;
-                            msg_.sendToTarget();
-                        }
-                        write(msg.getBytes());
-
-                        bytes = ddInStream.read(buffer);
-                        String readMessage = new String(buffer, 0, bytes);
-                        Log.d("RECEIVED", readMessage);
-
-                        msg_ = Message.obtain();
-                        msg_.setTarget(msgHandler);
-                        if(msg_.getTarget() != null) {
-                            msg_.obj = "Receiving:" + msg;
-                            msg_.sendToTarget();
-                        }
-
-                        // Send the obtained bytes to the Log
-                    /*mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-                            .sendToTarget();*/
-                    }
-                    //else
-                    //{
-                    //    Log.d("COMMUNICATION","Attempting to communicate but the socket is not connected");
-                    //}
-                } catch (IOException e) {
-                    Log.d("EXCEPTION",e.getMessage());
-                    break;
-                }
-            }
-        }
-
-        /* Call this from the main activity to send data to the remote device */
-
-        /**
-         * Send bytes to the raspberry
-         * @param bytes
-         */
-        public void write(byte[] bytes) {
-            try {
-                ddOutStream.write(bytes);
-            } catch (IOException e) { }
-        }
-
-        /**
-         *         set the handler that updates the textView
-        */
-        public void setHandler(Handler handler){
-            msgHandler = handler;
-        }
-
-        /* Call this from the main activity to shutdown the connection */
-        public void cancel() {
-            try {
-                Log.d("CANCEL", "Closing the connection");
-                ddSocket.close();
-            } catch (IOException e) {
-                Log.d("CANCEL", "Impossible closing the connection");
-            }
-        }
-
-        /**
-         *
-          * @param msg_ message to send
-         */
-        public void setMsg(String msg_)
-        {
-            msg = msg_;
         }
     }
 
@@ -254,7 +134,7 @@ public class BluetoothConnection {
         paredDevices();
 
         if (piDevice == null) {
-            Log.d("CONNECTTOROBOT:","Discovering device");
+            Log.d("CONNECT TO ROBOT:","Discovering device");
             DiscoverDevices();
         }
 
@@ -315,7 +195,6 @@ public class BluetoothConnection {
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         //registerReceiver(dReceiver, filter); // Don't forget to unregister during onDestroy
 
-
     }
 
 
@@ -334,9 +213,13 @@ public class BluetoothConnection {
      * Close the connection
      */
     public void closeConnection(){
-        establishConnection.cancel();
-        connection.cancel();
-        communication_state = NOT_CONNECTED;
+        if(connection_state == CONNECTED) {
+            try {
+                connection_state = NOT_CONNECTED;
+                ddSocket.close();
+            } catch (IOException closeException) { }
+        }
+         connection_state = NOT_CONNECTED;
     }
 
     /**
@@ -347,19 +230,73 @@ public class BluetoothConnection {
         return ba.isEnabled();
     }
 
-
     /**
-    * This functions just call the CommunicationThread which is a infinite loop which send the message
-    * in "msg_"
+     * Send data to the server in String format. It might happen that the buffer is overloaded and the
+     * other device could not read as fast as the buffer is loaded resulting in a wrong data received by
+     * by the other device. See sendStringSync().
+     * @param msg_
      */
-    public void SimpleTestCommunication(String msg_, Handler handler) {
+    public void sendString(String msg_) {
         if (connection_state == CONNECTED) {
-            connection.setHandler(handler);
-            connection.setMsg(msg_);
-            connection.start();
+            try {
+                Log.d("Socket"+socket_description,"Sending"+msg_);
+               ddSocket.getOutputStream().write(msg_.getBytes());
+            } catch (IOException e) {
+                Log.d("SendString exception","");
+                communication_state = NOT_CONNECTED;
+            }
         }else{
-            Log.d("SimpleTestCommunication","Not connection established yet");
+           // Log.d("BluetoothConnection","Not connection established yet");
         }
     }
 
+    /**
+     * Send the data in String format and wait to receive a message from the server before to return.
+     * @param msg_ Data
+     */
+    public void sendStringSync(String msg_){
+        if (connection_state == CONNECTED) {
+            try {
+                //Log.d("Socket"+socket_description,"Sending"+msg_);
+                ddSocket.getOutputStream().write(msg_.getBytes());
+
+                // read message sending by the server
+                byte[] buffer = new byte[1024];  // buffer store for the stream
+                int bytes; // bytes returned from read()
+                bytes = ddSocket.getInputStream().read(buffer);
+                String readMessage = new String(buffer, 0, bytes);
+                //Log.d("Received:",readMessage);
+
+            } catch (IOException e) {
+                Log.d("SendString exception","");
+                communication_state = NOT_CONNECTED;
+            }
+        }else{
+            //Log.d("BluetoothConnection","Not connection established yet");
+        }
+    }
+
+    public void setMACAddress(String addr){
+        MAC = addr;
+    }
+
+    public void setServiceUUID(String uuid){
+        SERVICE_UUID = uuid;
+    }
+
+    public String getMACAddress(){
+        return MAC;
+    }
+
+    public String getSERVICE_UUID(){
+        return SERVICE_UUID;
+    }
+
+    public void setSocketDescription(String desc){
+        socket_description = desc;
+    }
+
+    public String getSocketDescription(){
+        return socket_description;
+    }
 }

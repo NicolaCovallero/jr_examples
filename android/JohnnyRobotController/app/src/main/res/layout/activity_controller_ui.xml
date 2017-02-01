@@ -20,7 +20,7 @@
         android:id="@+id/backgroundView"
         android:clickable="false"
         android:contentDescription="@string/description"
-        android:src="@drawable/joystick" />
+        android:src="@mipmap/ic_launcher" />
 
     <FrameLayout
         android:layout_width="match_parent"
