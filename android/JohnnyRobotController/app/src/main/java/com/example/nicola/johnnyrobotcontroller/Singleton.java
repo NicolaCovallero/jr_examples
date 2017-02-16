@@ -9,6 +9,8 @@ public class Singleton {
     private static Singleton mInstance = null;
 
     private String mString;
+
+    private String connection_style;
     private BluetoothConnection motors_blue_connection, camera_motors_blue_connection;// bluetooth connections
 
 
@@ -30,6 +32,10 @@ public class Singleton {
     public void setString(String value) {
         mString = value;
     }
+
+    public void setConnectioStyle(String val){ connection_style = val; }
+
+    public String getConnectionStyle() { return connection_style; }
 
     public void setMotorsBluetoothConnection(BluetoothConnection bc){
         motors_blue_connection = bc;

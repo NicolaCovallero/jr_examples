@@ -31,7 +31,7 @@ public class BluetoothConnection {
     protected ConnectionThread connection = null;
 
     final protected String MAC = "B8:27:EB:20:53:7F";//"00:15:83:E8:49:2D";//CHANGE STRING WHEN CHANGE RASPBERRYPI
-    final protected String ROBOT_UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ea";
+    final protected String ROBOT_UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ee";
 
 
     protected int CONNECTED = 1;

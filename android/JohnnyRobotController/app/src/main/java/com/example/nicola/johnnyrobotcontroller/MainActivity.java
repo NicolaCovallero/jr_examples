@@ -24,7 +24,6 @@ import android.widget.Toast;
 import java.util.Calendar;
 
 
-
 public class MainActivity extends AppCompatActivity {
 
     private Bitmap js_motors, js_camera;
@@ -34,10 +33,16 @@ public class MainActivity extends AppCompatActivity {
     private TextView textView_terminal;
     private boolean connection_wifi = true; // false when the connection is via bluetooth
     private Handler textHandler;
-    protected Handler mHandler;
+    protected Handler terminalHandler;
+    private boolean connection;
 
     private int max_discovering_time = 20000; // 10 sec
     private BluetoothConnection motors_blue_connection, camera_motors_blue_connection;// bluetooth connection
+
+    private final int CONNECTION_PORT = 2525;
+    private final int DRIVING_PORT = 2526;
+    private final int CAMERA_DRIVING_PORT = 2529;
+    private WifiConnection connection_socket;
 
     final private String MAC = "00:15:83:E8:49:2D";//"00:15:83:E8:49:2D";//CHANGE STRING WHEN CHANGE RASPBERRYPI
     final private String DRIVING_SERVICE_UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ed";
@@ -47,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        connection = false;
 
         motors_blue_connection = new BluetoothConnection();
         motors_blue_connection.setMACAddress(MAC);
@@ -70,6 +77,21 @@ public class MainActivity extends AppCompatActivity {
                     final RingDialog rd = new RingDialog();
                     rd.launchRingDialog(v);
                     writeTerminal("Connecting via Bluetooth...");
+                }
+                else{
+                    // thread to send and receive back a data
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            connection_socket.connect(CONNECTION_PORT); // it is better to put it into a runnable
+                            connection_socket.sendStringData("connected");
+                            String msg_rcv = connection_socket.receiveStringData();
+                            String[] data_rcv = msg_rcv.split("/");
+                            if (  data_rcv[0].equals("jr_data") ){
+                                sendTerminalHandlerMsg("Connected with Johnny Robot via WIFI! :)");
+                            }
+                        }
+                    }).start();
                 }
             }
         });
@@ -98,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
         if (connection_wifi) {
             cb_bluetooth.setChecked(false);
             cb_wifi.setChecked(true);
+            connection_socket = new WifiConnection();
         }
         else{
             cb_bluetooth.setChecked(true);
@@ -142,8 +165,9 @@ public class MainActivity extends AppCompatActivity {
                     connection_wifi = true;
                     cb_bluetooth.setChecked(false);
                     cb_wifi.setChecked(true);
-                    writeTerminal("Chosen wifi connection. We are sorry but the app still cannot"+
-                            " communicate with johnny via wifi :(");
+                    connection_socket = new WifiConnection();
+
+                    writeTerminal("Chosen wifi communication, good choice bro! ;)");
                 }
                 else {
                     if (!motors_blue_connection.isEnabled()) {
@@ -170,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         });
+
 
 
         js_motors = BitmapFactory.decodeResource(getResources() , R.drawable.joystick);
@@ -200,6 +225,26 @@ public class MainActivity extends AppCompatActivity {
         });
         */
 
+        /**
+         * This handler is executed in the UI Thread when it receives a Message
+         * which could have some information, in this case this handler manage to enable
+         * STOP and COMMUNICATION buttons when it receives a message (which is send when the
+         * connection has been established or time out happened), and check if effectively the
+         * connection has been established (inputMessage.what == 1).
+         * NOTE: This handler can de deefined in whatever part/subclass of the code (by the way it is executed
+         * in the main Thread), but it is better to declear it
+         * as member of the mainActivity.
+         */
+        terminalHandler = new Handler(Looper.getMainLooper()) {
+            /*
+             * handleMessage() defines the operations to perform when
+             * the Handler receives a new Message to process.
+             */
+            @Override
+            public void handleMessage(Message inputMessage) {
+                writeTerminal((String) inputMessage.obj);
+            }
+        };
     }
 
     /**
@@ -244,41 +289,10 @@ public class MainActivity extends AppCompatActivity {
 
 
     private class RingDialog {
-        protected int state;
+        protected String state;
 
         public RingDialog(){
-            state = 0;
-            /**
-             * This handler is executed in the UI Thread when it receives a Message
-             * which could have some information, in this case this handler manage to enable
-             * STOP and COMMUNICATION buttons when it receives a message (which is send when the
-             * connection has been established or time out happened), and check if effectively the
-             * connection has been established (inputMessage.what == 1).
-             * NOTE: This handler can de deefined in whatever part/subclass of the code (by the way it is executed
-             * in the main Thread), but it is better to declear it
-             * as member of the mainActivity.
-             */
-            mHandler = new Handler(Looper.getMainLooper()) {
-                /*
-                 * handleMessage() defines the operations to perform when
-                 * the Handler receives a new Message to process.
-                 */
-                @Override
-                public void handleMessage(Message inputMessage) {
-                    if (inputMessage.what == 1) {
-                        Log.d("handleMessage", "enabling buttons");
-                        //stopConnectionPi.setEnabled(true);
-                        //communicationPi.setEnabled(true);
-                        writeTerminal("Connected with Johnny! :)");
-
-                    }
-                    else
-                    {
-                        Toast.makeText(getApplicationContext(), "Impossible to connect to the robot, try it again.", Toast.LENGTH_SHORT).show();
-                        writeTerminal("Impossible to connect to the robot, try it again.");
-                    }
-                }
-            };
+            state = "0";
         }
 
         /**
@@ -307,11 +321,9 @@ public class MainActivity extends AppCompatActivity {
                             counter += 100;
                         }
                         if ((counter >= max_discovering_time)) {
-                            state = 0;
-                            Log.d("Maximum discoverying time exceeded", ".....");
-                            writeTerminal("Maximum discoverying time exceeded...");
+                            state = "Maximum discoverying time exceeded ... ";
                         } else if (camera_motors_blue_connection.connectionState() == 1) {
-                            state = 1;
+                            state = "Connected with Johnny! :)";
                         }
 
                     } catch (Exception e) {
@@ -320,18 +332,25 @@ public class MainActivity extends AppCompatActivity {
 
                     ringProgressDialog.dismiss();
 
-                    /**
-                     * Prepare the message for the mHandler
-                     */
-                    Message completeMsg = mHandler.obtainMessage(state);
-                    /**
-                     * Sending the message to mHandler
-                     */
-                    completeMsg.sendToTarget();
+                    sendTerminalHandlerMsg(state);
+
+
                 }
             }).start();
         }
     }
+
+    /**
+     * Create a string message to send to the terminalHandler which prints it into the terminal
+      * @param msg String message
+     */
+    protected void sendTerminalHandlerMsg(String msg){
+        Message completeMsg = Message.obtain();
+        completeMsg.obj = msg;
+        completeMsg.setTarget(terminalHandler);
+        completeMsg.sendToTarget();
+    }
+
 
     @Override
     protected void onDestroy() {
