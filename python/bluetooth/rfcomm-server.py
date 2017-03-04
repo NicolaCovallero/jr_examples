@@ -4,6 +4,8 @@
 # $Id: rfcomm-server.py 518 2007-08-10 07:20:07Z albert $
 
 from bluetooth import *
+from uuid import getnode as get_mac
+
 import time
 
 # create a bluetooth RFCOMM socket
@@ -15,7 +17,7 @@ server_sock.listen(1)
 
 # return the socket own address ()
 [address,port] = server_sock.getsockname()
-print "Address " + str(address) + " port: " + str(port);
+print "Address " + str(address) + " port: " + str(port)
 
 # uuid of the connection
 uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
@@ -31,6 +33,7 @@ advertise_service( server_sock, "jr",
                    profiles = [ SERIAL_PORT_PROFILE ],
 #                   protocols = [ OBEX_UUID ]
                     )
+
 
 print("Waiting for connection on RFCOMM channel %d" % port)
 # Set a timeout on blocking socket operations: some operations, such as

@@ -38,6 +38,9 @@ print("connecting to \"%s\" on %s, port: %s" % (name, host, port))
 # Create the client socket
 sock=BluetoothSocket( RFCOMM )
 sock.connect((host, port))
+# return the socket own address ()
+[address,port] = sock.getsockname()
+print "Address " + str(address) + " port: " + str(port)
 
 print("connected.  type stuff")
 while True:
