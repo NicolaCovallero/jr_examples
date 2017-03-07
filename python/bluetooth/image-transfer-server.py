@@ -66,13 +66,14 @@ try:
     # Send the images to the client for 10 seconds.
     # Open the image
     img_ = Image.open('test.png')
-
-
+    img = img_.resize(image_size, Image.ANTIALIAS).save(stream, format="JPEG")
+    img_len = stream.tell()
     while time.time() - start_time < 10:
+        # NOTE: the resize of the image is expensive, doing it inside the while every iteration lead to 6 fps :(
         # downsize the image and save it into the stream
-        img = img_.resize(image_size, Image.ANTIALIAS).save(stream, format="JPEG")
+        #img = img_.resize(image_size, Image.ANTIALIAS).save(stream, format="JPEG")
         # Send the length of the image as a 32-bit unsigned long.
-        img_len = stream.tell()  # length of the data to send, the method .tell() returns the current index of the stream
+        #img_len = stream.tell()  # length of the data to send, the method .tell() returns the current index of the stream
         # which corresponds to the image's length
         connection.write(struct.pack('<L', img_len))
         connection.flush()
@@ -81,8 +82,8 @@ try:
         connection.write(stream.read())
 
         # close the stream
-        stream.seek(0)
-        stream.truncate()
+        #stream.seek(0)
+        #stream.truncate()
 
     # send a 32 bits of zeros to say the server that the communication is ended
     connection.write(struct.pack('<L', 0))
