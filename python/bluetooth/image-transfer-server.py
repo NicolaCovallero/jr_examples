@@ -14,7 +14,8 @@ from PIL import Image
 image_size = (320,240)
 
 if len(sys.argv) < 2:
-    pass
+    print "No argument given. The argument is [-b/-w] for bluetooth or wifi respectively"
+    sys.exit(None)
 elif sys.argv[1] == '-b':
     # create a bluetooth RFCOMM socket
     server_socket=bluetooth.BluetoothSocket( bluetooth.RFCOMM )
@@ -33,6 +34,7 @@ elif sys.argv[1] == '-b':
     # advertise the server, arguments:
     # the server socket
     # the service's name
+
     # the relative uuid 
     # other stuff :)
     bluetooth.advertise_service( server_socket, "jr",
