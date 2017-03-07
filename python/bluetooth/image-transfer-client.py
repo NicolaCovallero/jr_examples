@@ -9,9 +9,13 @@ import struct
 import time
 import bluetooth
 import sys
+import cv2
+import numpy as np
 from PIL import Image
 
 if len(sys.argv) < 2:
+    print "Not arguments given. Arguments are: \n1)  [-b/-w] for communication via bluetooth or wifi respectively;\n2) -cv2 (optional) to read the \
+image using OpenCV library, otherwise the PIL library is used"
     sys.exit(None)
 elif sys.argv[1] == "-b":
     addr = "00:15:83:E8:49:2D" # MAC address
@@ -42,13 +46,21 @@ elif sys.argv[1] == "-w":
 else:
     pass
 
+cv2_ = False
+if len(sys.argv) > 2:
+    if sys.argv[2] == "-cv2":
+        cv2_ = True
+		
 
 connection = client_socket.makefile('rb')
 
 num_images = 0
 start_time = 0
 connection_started = False
-image = Image.new("RGB", (512, 512), "white") # default image
+if not cv2_:
+    image = Image.new("RGB", (512, 512), "white") # default image
+else:
+    image = cv2.cvtColor(np.zeros((512,512),dtype=np.uint8), cv2.COLOR_GRAY2BGR)
 try:
     while True:
         # Read the length of the image as a 32-bit unsigned int. If the
@@ -67,15 +79,30 @@ try:
         # Rewind the stream, open it as an image with PIL and do some
         # processing on it
         image_stream.seek(0)
-        image = Image.open(image_stream)
-        print('Image is %dx%d' % image.size)
+
+        if not cv2_:
+            image = Image.open(image_stream)
+            print('Image is %dx%d' % image.size)
+        else:
+            image = cv2.imdecode(np.fromstring(image_stream.read() , dtype=np.uint8) , 1)
+            print('Image is %dx%d' % (image.shape [0],image.shape[1]))
+
         #image.verify()
         #print('Image is verified')
         num_images = num_images + 1
 
 finally:
-    image.show()
     print "capture " + str(num_images) + " in " + str(time.time() - start_time) + \
           " seconds. Equal to " + str(num_images/(time.time() - start_time)) + "fps."
+
+
+    if not cv2_:
+        image.show()
+    else:
+        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+        cv2.imshow('image',image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
     connection.close()
     client_socket.close()
